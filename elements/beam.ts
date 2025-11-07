@@ -1,11 +1,11 @@
 import { Support } from "./support";
-import { Load } from "./load";
+import { PointLoad, UDL, VDL } from "./load";
 import { Moment } from "../logic/moment";
 
 export class Beam {
   length: number;
   supports: Support[];
-  loads: Load[];
+  loads: PointLoad[];
 
   constructor(length: number) {
     this.length = length;
@@ -17,7 +17,7 @@ export class Beam {
     this.supports.push(support);
   }
 
-  addLoad(load: Load) {
+  addLoad(load: PointLoad) {
     this.loads.push(load);
   }
 
