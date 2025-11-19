@@ -13,8 +13,8 @@ export class Support {
   reaction: number;
 
   constructor(position: number, type: SupportType) {
-    this.position = position;
     this.type = type;
+    this.position = position;
     this.reaction = 0;
   }
 }

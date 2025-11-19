@@ -2,6 +2,7 @@
 export class PointLoad {
   position: number;
   magnitude: number;
+  name: "PointLoad" = "PointLoad";
 
   constructor(position: number, magnitude: number) {
     this.position = position;
@@ -14,6 +15,7 @@ export class UDL {
   startPosition: number;
   span: number;
   magnitudePerMeter: number;
+  name: "UDL" = "UDL";
 
   constructor(startPosition: number, span: number, magnitudePerMeter: number) {
     this.startPosition = startPosition;
@@ -35,6 +37,7 @@ export class VDL {
   highPosition: number;
   lowMagnitude: number;
   lowPosition: number;
+  name: "VDL" = "VDL";
 
   constructor(
     highMagnitude: number,
