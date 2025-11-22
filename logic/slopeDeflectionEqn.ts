@@ -46,7 +46,7 @@ export class SlopeDeflection {
     return result;
   };
 
-  getEquations(support: Support, beam: Beam, E = 1, I = 1) {
+  getEquations(support: Support, beam: Beam) {
     /// E and I in the parameter is the value of its coefficient in the slope deflection equation
     if (support.position > beam.length || support.position < 0) {
       throw Error(
