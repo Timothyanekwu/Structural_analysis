@@ -1,11 +1,17 @@
 import { PointLoad, UDL, VDL } from "../elements/load";
-import { SupportType, Support } from "../elements/support";
+import {
+  SupportType,
+  Support,
+  PinnedSupport,
+  RollerSupport,
+  FixedSupport,
+} from "../elements/support";
 
 export class FixedEndMoments {
   getFixedEndMoment(
     loads: (PointLoad | UDL | VDL)[],
     length: number,
-    support: Support
+    support: PinnedSupport | RollerSupport | FixedSupport
   ) {
     // FOR POINTLOADS | UDLs
     if (support.position > 0) {

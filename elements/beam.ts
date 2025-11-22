@@ -1,10 +1,10 @@
-import { Support } from "./support";
+import { PinnedSupport, RollerSupport, FixedSupport } from "./support";
 import { PointLoad, UDL, VDL } from "./load";
 import { Moment } from "../logic/moment";
 
 export class Beam {
   length: number;
-  supports: Support[];
+  supports: (FixedSupport | PinnedSupport | RollerSupport)[];
   loads: (PointLoad | UDL | VDL)[];
 
   constructor(length: number) {
@@ -13,7 +13,7 @@ export class Beam {
     this.loads = [];
   }
 
-  addSupport(support: Support) {
+  addSupport(support: FixedSupport | PinnedSupport | RollerSupport) {
     this.supports.push(support);
   }
 
@@ -23,13 +23,14 @@ export class Beam {
 
   degreeOfStaticIndeterminacy() {
     const totalReactions = this.supports.reduce(
-      (sum, support) => sum + support["reaction"],
+      (sum, support) => sum + support.YReaction,
       0
     );
     return totalReactions - 3; // For planar beams, 3 equations of equilibrium
   }
 
   private getEquivalentPointLoads(): PointLoad[] {
+    // did this is for determinate beams
     const pointLoads: PointLoad[] = [];
 
     for (const load of this.loads) {
@@ -85,17 +86,18 @@ export class Beam {
 
     const distBtwSupports =
       this.supports[1].position - this.supports[0].position; // distance between supports
-    this.supports[1].reaction = sumOfMoments / distBtwSupports; // reaction at the second support gotten
+    this.supports[1].YReaction = sumOfMoments / distBtwSupports; // reaction at the second support gotten
     console.log("Distance between Supports:", distBtwSupports);
 
-    this.supports[0].reaction = totalLoad - this.supports[1].reaction; // reaction at the first support
+    this.supports[0].YReaction = totalLoad - this.supports[1].YReaction; // reaction at the first support
 
-    const RA = this.supports[0].reaction;
-    const RB = this.supports[1].reaction;
+    const RA = this.supports[0].YReaction;
+    const RB = this.supports[1].YReaction;
 
     return { RA, RB };
   }
 
   // Optionally, add more methods later:
   // getShearAt(x), getMomentAt(x), etc.
+  // come back to this
 }

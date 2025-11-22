@@ -1,11 +1,13 @@
 // main.ts
 import { Beam } from "./elements/beam";
-import { Support } from "./elements/support";
+import { PinnedSupport, RollerSupport, FixedSupport } from "./elements/support";
 import { PointLoad, UDL, VDL } from "./elements/load";
 import { FixedEndMoments } from "./logic/FEMs";
+import { SlopeDeflection } from "./logic/slopeDeflectionEqn";
+
+const beam = new Beam(14);
 
 /*
-const beam = new Beam(6);
 
 // Add supports
 beam.addSupport(new Support(0, "roller"));
@@ -26,13 +28,19 @@ console.log(`RB (Right Support): ${RB.toFixed(2)} kN`);
 */
 
 const fem = new FixedEndMoments();
+const slopeDeflection = new SlopeDeflection();
 
-const load1 = new PointLoad(10, 18);
-const load2 = new UDL(0, 4, 20);
-const load3 = new VDL(3, 0, 0, 18);
+// const load1 = new PointLoad(20, 18);
+const load2 = new PointLoad(2.5, 8);
+const load3 = new UDL(0, 5, 2);
+// const load3 = new VDL(3, 0, 0, 18);
 
-const support1 = new Support(0, "fixed");
-const support2 = new Support(18, "pinned");
+const support1 = new FixedSupport(0);
+const support2 = new RollerSupport(4, 0, support1);
+const support3 = new RollerSupport(8, 0, support2);
+const support4 = new PinnedSupport(14, 0, support3);
 
-console.log(fem.getFixedEndMoment([load2], 4, support2));
-// console.log(fem.getFixedEndMoment([load2], 8, support2));
+// console.log("LEFT FEM: ", fem.getFixedEndMoment([load2, load3], 5, support1));
+// console.log("RIGHT FEM: ", fem.getFixedEndMoment([load2, load3], 5, support2));
+
+console.log(slopeDeflection.getEquations(support2, beam));
