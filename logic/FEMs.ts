@@ -1,26 +1,26 @@
 import { PointLoad, UDL, VDL } from "../elements/load";
 import {
-  SupportType,
-  Support,
+  FixedSupport,
   PinnedSupport,
   RollerSupport,
-  FixedSupport,
+  Support,
 } from "../elements/support";
 
 export class FixedEndMoments {
   getFixedEndMoment(
     loads: (PointLoad | UDL | VDL)[],
     length: number,
-    support: PinnedSupport | RollerSupport | FixedSupport
+    position: "left" | "right",
+    leftSupport: Support
   ) {
     // FOR POINTLOADS | UDLs
-    if (support.position > 0) {
+    if (position === "right") {
       // Therefore, the Fixed End Support's moment is in the clockwise direction & i.e -ve
 
       const rightMoment = loads.reduce(
         (res: number, curr: PointLoad | UDL | VDL) => {
           if (curr.name === "PointLoad") {
-            const a = curr.position;
+            const a = curr.position - leftSupport.position;
             const b = length - a;
             const w = curr.magnitude;
 
@@ -31,7 +31,7 @@ export class FixedEndMoments {
 
           if (curr.name === "UDL") {
             const w = curr.magnitudePerMeter;
-            const a = curr.startPosition;
+            const a = curr.startPosition - leftSupport.position;
             const b = curr.span + a;
             const l = length;
 
@@ -44,8 +44,8 @@ export class FixedEndMoments {
           }
 
           if (curr.name === "VDL") {
-            const a = curr.lowPosition;
-            const b = curr.highPosition;
+            const a = curr.lowPosition - leftSupport.position;
+            const b = curr.highPosition - leftSupport.position;
             const w = curr.highMagnitude;
             const l = length;
 
@@ -78,13 +78,13 @@ export class FixedEndMoments {
       );
 
       return rightMoment * -1; // The -1 negates the moment since it is clockwise
-    } else {
+    } else if (position === "left") {
       // else the Fixed End Support's moment is in the anticlockwise direction & i.e +ve
 
       const leftMoment = loads.reduce(
         (res: number, curr: PointLoad | UDL | VDL) => {
           if (curr.name === "PointLoad") {
-            const a = curr.position;
+            const a = curr.position - leftSupport.position;
             const b = length - a;
             const w = curr.magnitude;
 
@@ -95,7 +95,7 @@ export class FixedEndMoments {
 
           if (curr.name === "UDL") {
             const w = curr.magnitudePerMeter;
-            const a = curr.startPosition;
+            const a = curr.startPosition - leftSupport.position;
             const b = curr.span + a;
             const l = length;
 
@@ -109,8 +109,8 @@ export class FixedEndMoments {
           }
 
           if (curr.name == "VDL") {
-            const a = curr.lowPosition;
-            const b = curr.highPosition;
+            const a = curr.lowPosition - leftSupport.position;
+            const b = curr.highPosition - leftSupport.position;
             const w = curr.highMagnitude;
             const l = length;
 

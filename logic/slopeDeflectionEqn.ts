@@ -6,6 +6,7 @@ import {
 } from "../elements/support";
 import { FixedEndMoments } from "./FEMs";
 import { Beam } from "../elements/beam";
+import { UDL, VDL, PointLoad } from "../elements/load";
 
 export class StaticVariable {
   name: string;
@@ -24,13 +25,6 @@ export class StaticVariable {
 // };
 
 export class SlopeDeflection {
-  // span: number;
-
-  // constructor(support: Support, beam: Beam) {
-  //   this.support = support;
-  //   this.beam = beam;
-  // }
-
   collectLikeTerms = (terms: StaticVariable[]) => {
     let result: { [key: string]: number } = {};
 
@@ -46,14 +40,15 @@ export class SlopeDeflection {
     return result;
   };
 
-  getEquations(support: Support) {
+  getEquations(support: FixedSupport | PinnedSupport | RollerSupport) {
     /// E and I in the parameter is the value of its coefficient in the slope deflection equation
-
     const El = support.leftBeam?.Ecoef || 0;
     const Il = support.leftBeam?.Icoef || 0;
 
     const Er = support.rightBeam?.Ecoef || 0;
     const Ir = support.rightBeam?.Icoef || 0;
+
+    const fem = new FixedEndMoments();
 
     // Equation for the right side of the support
     // let right: { [key: string]: number } = {};
@@ -78,16 +73,22 @@ export class SlopeDeflection {
       const prev = support.prev;
       const rightSpan = next.position - curr.position;
       const leftSpan = curr.position - prev.position;
+      const FEMToLeft = fem.getFixedEndMoment(
+        support.leftBeam?.loads || [],
+        leftSpan,
+        "right",
+        support.prev
+      ); // get the FEM wrt the left beam therefore the support is at the right of the beam
 
-      // right[`EIteta${curr.id}`] = 4 / L;
-      // right[`EIteta${next.id}`] = 2 / L;
-      // right[`EIdeta`] = -1 * (6 / L ** 2);
-
-      // left[`EIteta${curr.id}`] = 4 / L;
-      // left[`EIteta${prev.id}`] = 2 / L;
-      // left[`EIdeta`] = -1 * (6 / L ** 2);
+      const FEMToRight = fem.getFixedEndMoment(
+        support.rightBeam?.loads || [],
+        rightSpan,
+        "left",
+        support
+      ); // get the FEM wrt the right beam therefore the support is at the left of the beam
 
       right = [
+        new StaticVariable("c", FEMToRight || 0),
         new StaticVariable(`EIteta${curr.id}`, (4 / rightSpan) * (Er * Ir)),
         new StaticVariable(
           `EIteta${next.id}`,
@@ -102,6 +103,7 @@ export class SlopeDeflection {
       ];
 
       left = [
+        new StaticVariable("c", FEMToLeft || 0),
         new StaticVariable(`EIteta${curr.id}`, (4 / leftSpan) * (El * Il)),
         new StaticVariable(
           `EIteta${prev.id}`,
@@ -111,13 +113,12 @@ export class SlopeDeflection {
           "EIdeta",
           !curr.settlement || curr.settlement === 0
             ? 0
-            : -1 * (6 / rightSpan ** 2) * curr.settlement * (El * Il)
+            : -1 * (6 / leftSpan ** 2) * curr.settlement * (El * Il)
         ),
       ];
     }
 
     const supportEqn = right.concat(left);
-    console.log("SUPPORT EQN: ", supportEqn);
 
     const generalEquation = this.collectLikeTerms(supportEqn);
     return generalEquation;

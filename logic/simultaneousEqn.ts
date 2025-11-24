@@ -21,7 +21,6 @@ export class Equation {
 
     const c2 = a2 - b2;
     const c3 = a3 - b3;
-    console.log(c2, c3);
 
     const Y = c3 / c2;
 

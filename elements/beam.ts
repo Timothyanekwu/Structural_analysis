@@ -32,6 +32,47 @@ export class Beam {
   }
 
   addLoad(load: PointLoad | UDL | VDL) {
+    if (load.name === "PointLoad") {
+      if (
+        load.position < this.startPosition ||
+        load.position > this.startPosition + this.length
+      ) {
+        throw new Error(
+          "Invalid position of PointLoad: The load should be within the length of the beam"
+        );
+      }
+    }
+
+    if (load.name === "UDL") {
+      const start = load.startPosition;
+      const end = load.startPosition + load.span;
+
+      if (
+        start < this.startPosition ||
+        end > this.startPosition + this.length
+      ) {
+        throw new Error(
+          "Invalid position of UDL: The load's span should be within the length of the beam"
+        );
+      }
+    }
+
+    if (load.name === "VDL") {
+      const low = load.lowPosition;
+      const high = load.highPosition;
+
+      if (
+        low < this.startPosition ||
+        high < this.startPosition ||
+        low > this.startPosition + this.length ||
+        high > this.startPosition + this.length
+      ) {
+        throw new Error(
+          "Invalid position of VDL: Both positions must lie within the length of the beam"
+        );
+      }
+    }
+
     this.loads.push(load);
   }
 

@@ -30,42 +30,44 @@ const slopeDeflection = new SlopeDeflection();
 
 // FIRST SPAN
 const support1 = new FixedSupport(0);
-const support2 = new PinnedSupport(5, 0, support1);
+const support2 = new RollerSupport(18, 0, support1);
 const AB = new Beam(
   support2.prev?.position || 0,
   support2.position - support1.position,
   [support1, support2]
 );
+
+const load1 = new VDL(3, 18, 0, 0);
+AB.addLoad(load1);
+
 support1.rightBeam = AB;
 support2.leftBeam = AB;
 
-const load1 = new PointLoad(20, 18);
-
 // SECOND SPAN
-const support3 = new PinnedSupport(11, 0, support2);
+const support3 = new RollerSupport(36, 0, support2);
 const BC = new Beam(
   support3.prev?.position || 0,
   support3.position - support2.position,
-  [support2, support3],
-  3
+  [support2, support3]
 );
+
+const load2 = new UDL(18, 18, 3);
+BC.addLoad(load2);
+
 support2.rightBeam = BC;
 support3.leftBeam = BC;
 
-const load2 = new PointLoad(2.5, 8);
-
 // THIRD SPAN
-// const support4 = new PinnedSupport(14, 0, support3);
-// const CD = new Beam(
-//   support4.prev?.position || 0,
-//   support4.position - support3.position,
-//   [support3, support4]
-// );
-// const load3 = new UDL(0, 5, 2);
+const support4 = new FixedSupport(54, 0, support3);
+const CD = new Beam(
+  support4.prev?.position || 0,
+  support4.position - support3.position,
+  [support3, support4]
+);
+const load3 = new VDL(3, 36, 0, 54);
+CD.addLoad(load3);
 
-// const load4 = new VDL(3, 0, 0, 18);
+support3.rightBeam = CD;
+support4.leftBeam = CD;
 
-// console.log("LEFT FEM: ", fem.getFixedEndMoment([load2, load3], 5, support1));
-// console.log("RIGHT FEM: ", fem.getFixedEndMoment([load2, load3], 5, support2));
-
-console.log(slopeDeflection.getEquations(support2));
+console.log(slopeDeflection.getEquations(support3));
