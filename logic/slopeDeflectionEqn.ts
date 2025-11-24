@@ -7,7 +7,7 @@ import {
 import { FixedEndMoments } from "./FEMs";
 import { Beam } from "../elements/beam";
 
-class StaticVariable {
+export class StaticVariable {
   name: string;
   coefficient: number;
 
@@ -46,16 +46,14 @@ export class SlopeDeflection {
     return result;
   };
 
-  getEquations(support: Support, beam: Beam) {
+  getEquations(support: Support) {
     /// E and I in the parameter is the value of its coefficient in the slope deflection equation
-    if (support.position > beam.length || support.position < 0) {
-      throw Error(
-        "The support is not in the system. This means that the support is nowhere in the span of the beam "
-      );
-    }
 
-    // const E = new StaticVariable("E", 1);
-    // const I = new StaticVariable("I", 1);
+    const El = support.leftBeam?.Ecoef || 0;
+    const Il = support.leftBeam?.Icoef || 0;
+
+    const Er = support.rightBeam?.Ecoef || 0;
+    const Ir = support.rightBeam?.Icoef || 0;
 
     // Equation for the right side of the support
     // let right: { [key: string]: number } = {};
@@ -90,36 +88,33 @@ export class SlopeDeflection {
       // left[`EIdeta`] = -1 * (6 / L ** 2);
 
       right = [
-        new StaticVariable(`EIteta${curr.id}`, 4 / rightSpan),
+        new StaticVariable(`EIteta${curr.id}`, (4 / rightSpan) * (Er * Ir)),
         new StaticVariable(
           `EIteta${next.id}`,
-          next.type === "fixed" ? 0 : 2 / rightSpan
+          next.type === "fixed" ? 0 : (2 / rightSpan) * (Er * Ir)
         ),
         new StaticVariable(
           "EIdeta",
           !curr.settlement || curr.settlement === 0
             ? 0
-            : -1 * (6 / rightSpan ** 2) * curr.settlement
+            : -1 * (6 / rightSpan ** 2) * curr.settlement * (Er * Ir)
         ),
       ];
 
       left = [
-        new StaticVariable(`EIteta${curr.id}`, 4 / leftSpan),
+        new StaticVariable(`EIteta${curr.id}`, (4 / leftSpan) * (El * Il)),
         new StaticVariable(
           `EIteta${prev.id}`,
-          prev.type === "fixed" ? 0 : 2 / leftSpan
+          prev.type === "fixed" ? 0 : (2 / leftSpan) * (El * Il)
         ),
         new StaticVariable(
           "EIdeta",
           !curr.settlement || curr.settlement === 0
             ? 0
-            : -1 * (6 / rightSpan ** 2) * curr.settlement
+            : -1 * (6 / rightSpan ** 2) * curr.settlement * (El * Il)
         ),
       ];
     }
-
-    console.log("RIGHT: ", right);
-    console.log("LEFT: ", left);
 
     const supportEqn = right.concat(left);
     console.log("SUPPORT EQN: ", supportEqn);

@@ -1,16 +1,30 @@
 import { PinnedSupport, RollerSupport, FixedSupport } from "./support";
+import { Support } from "./support";
 import { PointLoad, UDL, VDL } from "./load";
 import { Moment } from "../logic/moment";
+import { StaticVariable } from "../logic/slopeDeflectionEqn";
 
 export class Beam {
+  startPosition: number;
   length: number;
-  supports: (FixedSupport | PinnedSupport | RollerSupport)[];
+  supports: [Support, Support];
   loads: (PointLoad | UDL | VDL)[];
+  Icoef: number;
+  Ecoef: number;
 
-  constructor(length: number) {
+  constructor(
+    startPosition: number,
+    length: number,
+    supports: [Support, Support],
+    Icoef: number = 1,
+    Ecoef: number = 1
+  ) {
+    this.startPosition = startPosition;
     this.length = length;
-    this.supports = [];
+    this.supports = supports;
     this.loads = [];
+    this.Icoef = Icoef;
+    this.Ecoef = Ecoef;
   }
 
   addSupport(support: FixedSupport | PinnedSupport | RollerSupport) {
@@ -21,13 +35,13 @@ export class Beam {
     this.loads.push(load);
   }
 
-  degreeOfStaticIndeterminacy() {
-    const totalReactions = this.supports.reduce(
-      (sum, support) => sum + support.YReaction,
-      0
-    );
-    return totalReactions - 3; // For planar beams, 3 equations of equilibrium
-  }
+  // degreeOfStaticIndeterminacy() {
+  //   const totalReactions = this.supports.reduce(
+  //     (sum, support) => sum + support.YReaction,
+  //     0
+  //   );
+  //   return totalReactions - 3; // For planar beams, 3 equations of equilibrium
+  // }
 
   private getEquivalentPointLoads(): PointLoad[] {
     // did this is for determinate beams
@@ -47,55 +61,55 @@ export class Beam {
   }
 
   // --- Solver for simply supported beam ---
-  solveReactions() {
-    if (this.supports.length !== 2) {
-      throw new Error(
-        "Only simply supported beams with 2 supports are supported."
-      );
-    }
+  // solveReactions() {
+  //   if (this.supports.length !== 2) {
+  //     throw new Error(
+  //       "Only simply supported beams with 2 supports are supported."
+  //     );
+  //   }
 
-    const L = this.length;
-    const refPos = this.supports[0].position;
-    const loads = this.getEquivalentPointLoads();
+  //   const L = this.length;
+  //   const refPos = this.supports[0].position;
+  //   const loads = this.getEquivalentPointLoads();
 
-    const moment = new Moment();
-    let sumOfMoments = 0;
+  //   const moment = new Moment();
+  //   let sumOfMoments = 0;
 
-    // iterate over each load on the beam
-    for (let i = 0; i < this.loads.length; i++) {
-      if (loads[i].position < refPos) {
-        // if the current position of a load on the beam is less than the position of the reference position, then we perform the anticlockwise moment then update the sumOfMoments
-        const distance = refPos - loads[i].position;
-        sumOfMoments += moment.antiClockwiseMoment(
-          loads[i].magnitude,
-          distance
-        );
-      } else if (loads[i].position > refPos) {
-        // if the current position of a load on the beam is greater than the position of the reference position, then we perform the clockwise moment then update the sumOfMoments
-        const distance = loads[i].position - refPos;
-        sumOfMoments += moment.clockwiseMoment(loads[i].magnitude, distance);
-      } else {
-        // else if the position is the same as that of the reference position, then moment is zero
-        sumOfMoments += 0;
-      }
-    }
+  //   // iterate over each load on the beam
+  //   for (let i = 0; i < this.loads.length; i++) {
+  //     if (loads[i].position < refPos) {
+  //       // if the current position of a load on the beam is less than the position of the reference position, then we perform the anticlockwise moment then update the sumOfMoments
+  //       const distance = refPos - loads[i].position;
+  //       sumOfMoments += moment.antiClockwiseMoment(
+  //         loads[i].magnitude,
+  //         distance
+  //       );
+  //     } else if (loads[i].position > refPos) {
+  //       // if the current position of a load on the beam is greater than the position of the reference position, then we perform the clockwise moment then update the sumOfMoments
+  //       const distance = loads[i].position - refPos;
+  //       sumOfMoments += moment.clockwiseMoment(loads[i].magnitude, distance);
+  //     } else {
+  //       // else if the position is the same as that of the reference position, then moment is zero
+  //       sumOfMoments += 0;
+  //     }
+  //   }
 
-    // sum of downward force (loads)
-    const totalLoad = loads.reduce((sum, load) => sum + load.magnitude, 0);
-    console.log("Total Load on Beam:", totalLoad);
+  //   // sum of downward force (loads)
+  //   const totalLoad = loads.reduce((sum, load) => sum + load.magnitude, 0);
+  //   console.log("Total Load on Beam:", totalLoad);
 
-    const distBtwSupports =
-      this.supports[1].position - this.supports[0].position; // distance between supports
-    this.supports[1].YReaction = sumOfMoments / distBtwSupports; // reaction at the second support gotten
-    console.log("Distance between Supports:", distBtwSupports);
+  //   const distBtwSupports =
+  //     this.supports[1].position - this.supports[0].position; // distance between supports
+  //   this.supports[1].YReaction = sumOfMoments / distBtwSupports; // reaction at the second support gotten
+  //   console.log("Distance between Supports:", distBtwSupports);
 
-    this.supports[0].YReaction = totalLoad - this.supports[1].YReaction; // reaction at the first support
+  //   this.supports[0].YReaction = totalLoad - this.supports[1].YReaction; // reaction at the first support
 
-    const RA = this.supports[0].YReaction;
-    const RB = this.supports[1].YReaction;
+  //   const RA = this.supports[0].YReaction;
+  //   const RB = this.supports[1].YReaction;
 
-    return { RA, RB };
-  }
+  //   return { RA, RB };
+  // }
 
   // Optionally, add more methods later:
   // getShearAt(x), getMomentAt(x), etc.
