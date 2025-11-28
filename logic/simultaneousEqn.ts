@@ -1,31 +1,43 @@
+import { matrix, lusolve, multiply, pinv } from "mathjs";
+
+type EquationProps = { [key: string]: number };
+
 export class Equation {
-  simult2(
-    x1: number,
-    x2: number,
-    x3: number,
-    y1: number,
-    y2: number,
-    y3: number
-  ) {
-    const a1 = y1 * x1;
-    const a2 = y1 * x2;
-    const a3 = y1 * x3;
+  solveEquations(equations: EquationProps[]) {
+    // Step 1: collect all unknowns (exclude 'c')
+    const variableNames = Array.from(
+      new Set(
+        equations.flatMap((eq) => Object.keys(eq).filter((k) => k !== "c"))
+      )
+    );
 
-    const b1 = x1 * y1;
-    const b2 = x1 * y2;
-    const b3 = x1 * y3;
+    // Step 2: build K matrix and F vector
+    const K = equations.map((eq) => variableNames.map((v) => eq[v] || 0));
+    const F = equations.map((eq) => -(eq.c || 0));
 
-    // Simultaneous equn being:
-    // a1X + a2Y = a3 -------> i
-    // b1X + b2Y = b3 -------> ii
+    const numEquations = K.length;
+    const numUnknowns = variableNames.length;
 
-    const c2 = a2 - b2;
-    const c3 = a3 - b3;
+    // Step 3: solve (square vs non-square)
+    let solutionArray;
+    if (numEquations === numUnknowns) {
+      solutionArray = lusolve(matrix(K), matrix(F));
+    } else {
+      solutionArray = multiply(pinv(matrix(K)), matrix(F));
+    }
 
-    const Y = c3 / c2;
+    // Step 4: convert to plain JS array
+    let arr: any = solutionArray ? solutionArray.toArray() : solutionArray;
 
-    const X = (a3 - (a2 * Y)) / a1; // prettier-ignore
+    // Flatten 2D [[x],[y]] -> [x,y]
+    arr = arr.map((v: any) => (Array.isArray(v) ? v[0] : v));
 
-    return { X, Y };
+    // Step 5: map variables to values
+    const result: { [key: string]: number } = {};
+    variableNames.forEach((name, i) => {
+      result[name] = Math.round(arr[i] * 1000) / 1000;
+    });
+
+    return result;
   }
 }

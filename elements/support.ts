@@ -15,14 +15,14 @@ export abstract class Support {
   prev: Support | null;
   next: Support | null;
   id: number;
-  settlement?: number;
+  settlement: number;
   leftBeam: Beam | null = null;
   rightBeam: Beam | null = null;
 
   constructor(
     position: number,
     type: SupportType,
-    settlement?: number,
+    settlement: number = 0,
     prev: Support | null = null,
     next: Support | null = null,
     leftBeam: Beam | null = null,
@@ -33,7 +33,7 @@ export abstract class Support {
     this.prev = prev;
     this.next = next;
     this.id = !this.prev ? 0 : this.prev.id + 1;
-    this.settlement = settlement || 0;
+    this.settlement = settlement ?? 0;
     this.leftBeam = leftBeam;
     this.rightBeam = rightBeam;
 
@@ -45,13 +45,13 @@ export abstract class Support {
 export class RollerSupport extends Support {
   allowRotation: boolean;
   YReaction: number;
-  settlement: number;
   leftBeam: Beam | null = null;
   rightBeam: Beam | null = null;
+  settlement: number = 0;
 
   constructor(
     position: number,
-    settlement?: number,
+    settlement: number,
     prev: Support | null = null,
     leftBeam: Beam | null = null,
     rightBeam: Beam | null = null
@@ -59,7 +59,6 @@ export class RollerSupport extends Support {
     super(position, "roller", settlement, prev, null, leftBeam, rightBeam);
     this.allowRotation = true;
     this.YReaction = 0;
-    this.settlement = settlement || 0;
   }
 }
 
@@ -67,13 +66,13 @@ export class PinnedSupport extends Support {
   rotation: boolean;
   YReaction: number;
   XReaction: number;
-  settlement: number;
   leftBeam: Beam | null = null;
   rightBeam: Beam | null = null;
+  settlement: number = 0;
 
   constructor(
     position: number,
-    settlement?: number,
+    settlement: number = 0,
     prev: Support | null = null,
     leftBeam: Beam | null = null,
     rightBeam: Beam | null = null
@@ -82,7 +81,6 @@ export class PinnedSupport extends Support {
     this.rotation = true;
     this.YReaction = 0;
     this.XReaction = 0;
-    this.settlement = settlement || 0;
   }
 }
 
@@ -91,13 +89,13 @@ export class FixedSupport extends Support {
   YReaction: number;
   XReaction: number;
   moment: number;
-  settlement: number;
   leftBeam: Beam | null = null;
   rightBeam: Beam | null = null;
+  settlement: number = 0;
 
   constructor(
     position: number,
-    settlement?: number,
+    settlement: number = 0,
     prev: Support | null = null,
     leftBeam: Beam | null = null,
     rightBeam: Beam | null = null
@@ -106,7 +104,6 @@ export class FixedSupport extends Support {
     this.YReaction = 0;
     this.XReaction = 0;
     this.moment = 0;
-    this.settlement = settlement || 0;
   }
 
   clockwise() {

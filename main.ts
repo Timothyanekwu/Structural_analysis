@@ -4,6 +4,7 @@ import { PinnedSupport, RollerSupport, FixedSupport } from "./elements/support";
 import { PointLoad, UDL, VDL } from "./elements/load";
 import { FixedEndMoments } from "./logic/FEMs";
 import { SlopeDeflection } from "./logic/slopeDeflectionEqn";
+import { Equation } from "./logic/simultaneousEqn";
 
 /*
 
@@ -27,6 +28,7 @@ console.log(`RB (Right Support): ${RB.toFixed(2)} kN`);
 
 const fem = new FixedEndMoments();
 const slopeDeflection = new SlopeDeflection();
+const equation = new Equation();
 
 // FIRST SPAN
 const support1 = new FixedSupport(0);
@@ -70,4 +72,14 @@ CD.addLoad(load3);
 support3.rightBeam = CD;
 support4.leftBeam = CD;
 
-console.log(slopeDeflection.getEquations(support3));
+const equations = [
+  // slopeDeflection.getEquations(support1),
+  slopeDeflection.getEquations(support2),
+  slopeDeflection.getEquations(support3),
+  // slopeDeflection.getEquations(support4),
+];
+
+// console.log(equations);
+
+console.log(equation.solveEquations(equations));
+// equation.solveEquations(equations);

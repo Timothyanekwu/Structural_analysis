@@ -84,7 +84,7 @@ export class Beam {
   //   return totalReactions - 3; // For planar beams, 3 equations of equilibrium
   // }
 
-  private getEquivalentPointLoads(): PointLoad[] {
+  getEquivalentPointLoads() {
     // did this is for determinate beams
     const pointLoads: PointLoad[] = [];
 
