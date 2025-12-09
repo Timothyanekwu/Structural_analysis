@@ -2,12 +2,14 @@ import { PinnedSupport, RollerSupport, FixedSupport } from "./support";
 import { Support } from "./support";
 import { PointLoad, UDL, VDL } from "./load";
 import { Moment } from "../logic/moment";
-import { StaticVariable } from "../logic/slopeDeflectionEqn";
 
 export class Beam {
   startPosition: number;
   length: number;
-  supports: [Support, Support];
+  supports: [
+    (FixedSupport | RollerSupport | PinnedSupport) | null,
+    (FixedSupport | RollerSupport | PinnedSupport) | null
+  ];
   loads: (PointLoad | UDL | VDL)[];
   Icoef: number;
   Ecoef: number;
@@ -15,7 +17,10 @@ export class Beam {
   constructor(
     startPosition: number,
     length: number,
-    supports: [Support, Support],
+    supports: [
+      (FixedSupport | RollerSupport | PinnedSupport) | null,
+      (FixedSupport | RollerSupport | PinnedSupport) | null
+    ],
     Icoef: number = 1,
     Ecoef: number = 1
   ) {

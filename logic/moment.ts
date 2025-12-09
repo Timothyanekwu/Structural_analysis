@@ -20,6 +20,6 @@ export class Moment {
         }, 0)
       : 0;
 
-    return result;
+    return result * -1;
   }
 }

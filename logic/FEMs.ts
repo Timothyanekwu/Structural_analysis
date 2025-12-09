@@ -1,4 +1,5 @@
 import { PointLoad, UDL, VDL } from "../elements/load";
+import { Beam } from "../elements/beam";
 import {
   FixedSupport,
   PinnedSupport,
@@ -7,11 +8,12 @@ import {
 } from "../elements/support";
 
 export class FixedEndMoments {
+  // For a single support
   getFixedEndMoment(
     loads: (PointLoad | UDL | VDL)[],
     length: number,
     position: "left" | "right",
-    leftSupport: Support
+    leftSupport: Support | FixedSupport | PinnedSupport | RollerSupport
   ) {
     // FOR POINTLOADS | UDLs
     if (position === "right") {
@@ -145,6 +147,53 @@ export class FixedEndMoments {
 
       return leftMoment;
     }
+  }
+
+  getAllFEMs(support: Support) {
+    const fems: { supportId: number; left: number; right: number }[] = [];
+
+    let curr: Support | null = support;
+
+    while (curr) {
+      let leftFEM = 0;
+      let rightFEM = 0;
+
+      // Compute FEM to the left if it exists
+      if (curr.prev && curr.leftBeam) {
+        const leftSpan = curr.position - curr.prev.position;
+
+        leftFEM =
+          this.getFixedEndMoment(
+            curr.leftBeam.loads,
+            leftSpan,
+            "right",
+            curr.prev
+          ) || 0;
+      }
+
+      // Compute FEM to the right if it exists
+      if (curr.next && curr.rightBeam) {
+        const rightSpan = curr.next.position - curr.position;
+
+        rightFEM =
+          this.getFixedEndMoment(
+            curr.rightBeam.loads,
+            rightSpan,
+            "left",
+            curr
+          ) || 0;
+      }
+
+      fems.push({
+        supportId: curr.id,
+        left: leftFEM,
+        right: rightFEM,
+      });
+
+      curr = curr.next; // advance
+    }
+
+    return fems;
   }
 
   // getFixedEndMomentVDL(load: VDL, length: number) {
