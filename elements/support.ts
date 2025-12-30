@@ -1,5 +1,5 @@
-import { Beam } from "./beam";
-import { Node } from "./beam";
+import { Beam } from "./member";
+import { Node } from "./node";
 
 // --- Support Class ---
 export type SupportType = "pinned" | "roller" | "fixed";
@@ -48,21 +48,28 @@ const SUPPORT_REACTIONS: Record<SupportType, number> = {
 // }
 
 export abstract class Support {
-  position: number;
-  type: SupportType;
+  readonly type: SupportType;
+
+  x: number;
+  y: number;
+  settlement: number;
+
   prev: Support | null;
   next: Support | null;
   id: number;
-  settlement: number;
-  leftBeam: Beam | null = null;
-  rightBeam: Beam | null = null;
-  rightMoment: number;
-  leftMoment: number;
+
+  leftBeam: Beam | null;
+  rightBeam: Beam | null;
+
+  leftMoment: number = 0;
+  rightMoment: number = 0;
+
   node?: Node;
 
-  constructor(
-    position: number,
+  protected constructor(
+    x: number,
     type: SupportType,
+    y: number = 0,
     settlement: number = 0,
     prev: Support | null = null,
     next: Support | null = null,
@@ -70,15 +77,16 @@ export abstract class Support {
     rightBeam: Beam | null = null
   ) {
     this.type = type;
-    this.position = position;
+    this.x = x;
+    this.y = y;
+    this.settlement = settlement;
+
     this.prev = prev;
     this.next = next;
-    this.id = !this.prev ? 0 : this.prev.id + 1;
-    this.settlement = settlement ?? 0;
+    this.id = prev ? prev.id + 1 : 0;
+
     this.leftBeam = leftBeam;
     this.rightBeam = rightBeam;
-    this.leftMoment = 0;
-    this.rightMoment = 0;
 
     if (prev) prev.next = this;
     if (next) next.prev = this;
@@ -86,74 +94,62 @@ export abstract class Support {
 }
 
 export class RollerSupport extends Support {
-  allowRotation: boolean;
-  YReaction: number;
-  leftBeam: Beam | null = null;
-  rightBeam: Beam | null = null;
-  settlement: number = 0;
+  readonly allowRotation = true;
+  YReaction: number = 0;
 
   constructor(
-    position: number,
-    settlement: number,
+    x: number,
+    y: number = 0,
     prev: Support | null = null,
+    settlement: number = 0,
     leftBeam: Beam | null = null,
     rightBeam: Beam | null = null
   ) {
-    super(position, "roller", settlement, prev, null, leftBeam, rightBeam);
-    this.allowRotation = true;
-    this.YReaction = 0;
+    super(x, "roller", y, settlement, prev, null, leftBeam, rightBeam);
   }
 }
 
 export class PinnedSupport extends Support {
-  rotation: boolean;
-  YReaction: number;
-  XReaction: number;
-  leftBeam: Beam | null = null;
-  rightBeam: Beam | null = null;
-  settlement: number = 0;
+  readonly allowRotation = true;
+
+  XReaction: number = 0;
+  YReaction: number = 0;
 
   constructor(
-    position: number,
-    settlement: number = 0,
+    x: number,
+    y: number = 0,
     prev: Support | null = null,
+    settlement: number = 0,
     leftBeam: Beam | null = null,
     rightBeam: Beam | null = null
   ) {
-    super(position, "pinned", settlement, prev, null, leftBeam, rightBeam);
-    this.rotation = true;
-    this.YReaction = 0;
-    this.XReaction = 0;
+    super(x, "pinned", y, settlement, prev, null, leftBeam, rightBeam);
   }
 }
 
 export class FixedSupport extends Support {
-  rotation: 0 = 0;
-  YReaction: number;
-  XReaction: number;
-  moment: number;
-  leftBeam: Beam | null = null;
-  rightBeam: Beam | null = null;
-  settlement: number = 0;
+  readonly allowRotation = false;
+
+  XReaction: number = 0;
+  YReaction: number = 0;
+  MomentReaction: number = 0;
 
   constructor(
-    position: number,
-    settlement: number = 0,
+    x: number,
+    y: number = 0,
     prev: Support | null = null,
+    settlement: number = 0,
     leftBeam: Beam | null = null,
     rightBeam: Beam | null = null
   ) {
-    super(position, "fixed", settlement, prev, null, leftBeam, rightBeam);
-    this.YReaction = 0;
-    this.XReaction = 0;
-    this.moment = 0;
+    super(x, "fixed", y, settlement, prev, null, leftBeam, rightBeam);
   }
 
-  clockwise() {
-    return this.moment * -1;
+  clockwiseMoment() {
+    return -this.MomentReaction;
   }
 
-  antiClockwise() {
-    return Math.abs(this.moment);
+  antiClockwiseMoment() {
+    return Math.abs(this.MomentReaction);
   }
 }

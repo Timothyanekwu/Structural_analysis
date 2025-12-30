@@ -1,5 +1,6 @@
 import { PointLoad, UDL, VDL } from "../elements/load";
-import { Beam } from "../elements/beam";
+import { Beam } from "../elements/member";
+import { Node } from "../elements/node";
 import {
   FixedSupport,
   PinnedSupport,
@@ -152,10 +153,11 @@ export class FixedEndMoments {
   getFixedEndMoment(
     loads: (PointLoad | UDL | VDL)[],
     length: number,
-    position: "left" | "right",
-    leftSupport: Support | FixedSupport | PinnedSupport | RollerSupport
+    position: "start" | "end",
+    // leftSupport: Support | FixedSupport | PinnedSupport | RollerSupport
+    startNode: Node
   ) {
-    if (position === "right") {
+    if (position === "end") {
       // Right end moment (clockwise = -ve)
       let rightMoment = 0;
       let c = 0; // Kahan compensation
@@ -164,21 +166,21 @@ export class FixedEndMoments {
         let term = 0;
 
         if (curr.name === "PointLoad") {
-          const a = curr.position - leftSupport.position;
+          const a = curr.position - startNode.x;
           const b = length - a;
           const w = curr.magnitude;
           term = (w * a ** 2 * b) / length ** 2;
         } else if (curr.name === "UDL") {
           const w = curr.magnitudePerMeter;
-          const a = curr.startPosition - leftSupport.position;
+          const a = curr.startPosition - startNode.x;
           const b = curr.span + a;
           const l = length;
           const t1 = (l / 3) * (b ** 3 - a ** 3);
           const t2 = (1 / 4) * (b ** 4 - a ** 4);
           term = (w / l ** 2) * (t1 - t2);
         } else if (curr.name === "VDL") {
-          const a = curr.lowPosition - leftSupport.position;
-          const b = curr.highPosition - leftSupport.position;
+          const a = curr.lowPosition - startNode.x;
+          const b = curr.highPosition - startNode.x;
           const w = curr.highMagnitude;
           const l = length;
 
@@ -205,8 +207,9 @@ export class FixedEndMoments {
         rightMoment = t;
       }
 
+      // console.log("FEM RightMoment: ", rightMoment);
       return rightMoment * -1; // clockwise
-    } else if (position === "left") {
+    } else if (position === "start") {
       // Left end moment (anticlockwise = +ve)
       let leftMoment = 0;
       let c = 0; // Kahan compensation
@@ -215,13 +218,13 @@ export class FixedEndMoments {
         let term = 0;
 
         if (curr.name === "PointLoad") {
-          const a = curr.position - leftSupport.position;
+          const a = curr.position - startNode.x;
           const b = length - a;
           const w = curr.magnitude;
           term = (w * a * b ** 2) / length ** 2;
         } else if (curr.name === "UDL") {
           const w = curr.magnitudePerMeter;
-          const a = curr.startPosition - leftSupport.position;
+          const a = curr.startPosition - startNode.x;
           const b = curr.span + a;
           const l = length;
           const t1 = (l ** 2 / 2) * (b ** 2 - a ** 2);
@@ -229,8 +232,8 @@ export class FixedEndMoments {
           const t3 = (1 / 4) * (b ** 4 - a ** 4);
           term = (w / l ** 2) * (t1 - t2 + t3);
         } else if (curr.name === "VDL") {
-          const a = curr.lowPosition - leftSupport.position;
-          const b = curr.highPosition - leftSupport.position;
+          const a = curr.lowPosition - startNode.x;
+          const b = curr.highPosition - startNode.x;
           const w = curr.highMagnitude;
           const l = length;
 
@@ -257,56 +260,58 @@ export class FixedEndMoments {
         leftMoment = t;
       }
 
+      // console.log(startNode.id, "FEM LeftMoment: ", leftMoment);
       return leftMoment; // anticlockwise
     }
   }
 
-  getAllFEMs(support: Support) {
-    const fems: { supportId: number; left: number; right: number }[] = [];
+  // getAllFEMs(support: Support) {
+  //   const fems: { supportId: number; left: number; right: number }[] = [];
 
-    let curr: Support | null = support;
+  //   let curr: Support | null = support;
 
-    while (curr) {
-      let leftFEM = 0;
-      let rightFEM = 0;
+  //   while (curr) {
+  //     let leftFEM = 0;
+  //     let rightFEM = 0;
 
-      // Compute FEM to the left if it exists
-      if (curr.prev && curr.leftBeam) {
-        const leftSpan = curr.position - curr.prev.position;
+  //     // Compute FEM to the left if it exists
+  //     if (curr.prev && curr.leftBeam) {
+  //       const leftSpan = curr.x - curr.prev.x;
 
-        leftFEM =
-          this.getFixedEndMoment(
-            curr.leftBeam.loads,
-            leftSpan,
-            "right",
-            curr.prev
-          ) || 0;
-      }
+  //       leftFEM =
+  //         this.getFixedEndMoment(
+  //           curr.leftBeam.loads,
+  //           leftSpan,
+  //           "start",
+  //           curr.prev
+  //         ) || 0;
+  //     }
 
-      // Compute FEM to the right if it exists
-      if (curr.next && curr.rightBeam) {
-        const rightSpan = curr.next.position - curr.position;
+  //     // Compute FEM to the right if it exists
+  //     if (curr.next && curr.rightBeam) {
+  //       const rightSpan = curr.next.x - curr.x;
 
-        rightFEM =
-          this.getFixedEndMoment(
-            curr.rightBeam.loads,
-            rightSpan,
-            "left",
-            curr
-          ) || 0;
-      }
+  //       rightFEM =
+  //         this.getFixedEndMoment(
+  //           curr.rightBeam.loads,
+  //           rightSpan,
+  //           "left",
+  //           curr
+  //         ) || 0;
+  //     }
 
-      fems.push({
-        supportId: curr.id,
-        left: leftFEM,
-        right: rightFEM,
-      });
+  //     fems.push({
+  //       supportId: curr.id,
+  //       left: leftFEM,
+  //       right: rightFEM,
+  //     });
 
-      curr = curr.next; // advance
-    }
+  //     curr = curr.next; // advance
+  //   }
 
-    return fems;
-  }
+  //   console.log(fems);
+  //   return fems;
+  // }
 
   // getFixedEndMomentVDL(load: VDL, length: number) {
   //   const a = load.lowPosition;

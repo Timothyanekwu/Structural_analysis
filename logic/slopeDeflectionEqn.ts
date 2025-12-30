@@ -5,6 +5,7 @@ import {
 } from "../elements/support";
 import { FixedEndMoments } from "./FEMs";
 import { Moment } from "./moment";
+import { Node } from "../elements/node";
 
 type Term = { name: string; coefficient: number };
 
@@ -247,272 +248,466 @@ export class SlopeDeflection {
 
   //   return { left, right };
   // }
-  supportEquations(support: FixedSupport | PinnedSupport | RollerSupport) {
-    const El = support.leftBeam?.Ecoef || 0;
-    const Il = support.leftBeam?.Icoef || 0;
-    const Er = support.rightBeam?.Ecoef || 0;
-    const Ir = support.rightBeam?.Icoef || 0;
+
+  //
+  // supportEquations(support: FixedSupport | PinnedSupport | RollerSupport) {
+  //   const El = support.leftBeam?.Ecoef || 0;
+  //   const Il = support.leftBeam?.Icoef || 0;
+  //   const Er = support.rightBeam?.Ecoef || 0;
+  //   const Ir = support.rightBeam?.Icoef || 0;
+
+  //   const fem = new FixedEndMoments();
+  //   const moment = new Moment();
+
+  //   const left: Term[] = [];
+  //   const right: Term[] = [];
+  //   const compMapLeft: { [key: string]: number } = {};
+  //   const compMapRight: { [key: string]: number } = {};
+
+  //   const curr = support;
+  //   const next = support.next;
+  //   const prev = support.prev;
+
+  //   // Helper Kahan push function
+  //   const kahanPush = (
+  //     arr: Term[],
+  //     term: Term,
+  //     compMap: { [key: string]: number }
+  //   ) => {
+  //     if (!term.coefficient || term.coefficient === 0) return;
+
+  //     if (!(term.name in compMap)) {
+  //       arr.push({ ...term });
+  //       compMap[term.name] = 0; // initialize compensation
+  //     } else {
+  //       const existing = arr.find((t) => t.name === term.name)!;
+  //       const y = term.coefficient - compMap[term.name];
+  //       const t = existing.coefficient + y;
+  //       compMap[term.name] = t - existing.coefficient - y;
+  //       existing.coefficient = t;
+  //     }
+  //   };
+
+  //   if (!prev) {
+  //     // Left-most support
+  //     const rightSpan = next ? next.x - curr.x : curr.rightBeam?.length || 0;
+  //     const FEMToRight = fem.getFixedEndMoment(
+  //       curr.rightBeam?.loads || [],
+  //       rightSpan,
+  //       "left",
+  //       support
+  //     );
+  //     const momentToLeft = moment.getMoment(
+  //       curr.x,
+  //       curr.leftBeam?.getEquivalentPointLoads() || []
+  //     );
+
+  //     if (curr.leftBeam) {
+  //       kahanPush(
+  //         left,
+  //         { name: "c", coefficient: momentToLeft || 0 },
+  //         compMapLeft
+  //       );
+  //       kahanPush(
+  //         left,
+  //         {
+  //           name: `EIteta${curr.id}`,
+  //           coefficient:
+  //             curr.type === "fixed"
+  //               ? 0
+  //               : (4 / curr.leftBeam.length) * (Er * Ir),
+  //         },
+  //         compMapLeft
+  //       );
+  //       kahanPush(
+  //         left,
+  //         {
+  //           name: "EIdeta",
+  //           coefficient: curr.settlement
+  //             ? (-6 / curr.leftBeam.length ** 2) * curr.settlement * (Er * Ir)
+  //             : 0,
+  //         },
+  //         compMapLeft
+  //       );
+  //     }
+
+  //     kahanPush(
+  //       right,
+  //       { name: "c", coefficient: FEMToRight || 0 },
+  //       compMapRight
+  //     );
+  //     kahanPush(
+  //       right,
+  //       {
+  //         name: `EIteta${curr.id}`,
+  //         coefficient: curr.type === "fixed" ? 0 : (4 / rightSpan) * (Er * Ir),
+  //       },
+  //       compMapRight
+  //     );
+  //     if (next) {
+  //       kahanPush(
+  //         right,
+  //         {
+  //           name: `EIteta${next.id}`,
+  //           coefficient:
+  //             next.type === "fixed" ? 0 : (2 / rightSpan) * (Er * Ir),
+  //         },
+  //         compMapRight
+  //       );
+  //     }
+  //     kahanPush(
+  //       right,
+  //       {
+  //         name: "EIdeta",
+  //         coefficient: curr.settlement
+  //           ? (-6 / rightSpan ** 2) * curr.settlement * (Er * Ir)
+  //           : 0,
+  //       },
+  //       compMapRight
+  //     );
+  //   } else if (!next) {
+  //     // Right-most support
+  //     const leftSpan = curr.x - prev.x;
+  //     const FEMToLeft = fem.getFixedEndMoment(
+  //       curr.leftBeam?.loads || [],
+  //       leftSpan,
+  //       "right",
+  //       prev
+  //     );
+  //     const momentToRight = moment.getMoment(
+  //       curr.x,
+  //       curr.rightBeam?.getEquivalentPointLoads() || []
+  //     );
+
+  //     kahanPush(left, { name: "c", coefficient: FEMToLeft || 0 }, compMapLeft);
+  //     kahanPush(
+  //       left,
+  //       {
+  //         name: `EIteta${curr.id}`,
+  //         coefficient: curr.type === "fixed" ? 0 : (4 / leftSpan) * (El * Il),
+  //       },
+  //       compMapLeft
+  //     );
+  //     kahanPush(
+  //       left,
+  //       {
+  //         name: `EIteta${prev.id}`,
+  //         coefficient: prev.type === "fixed" ? 0 : (2 / leftSpan) * (El * Il),
+  //       },
+  //       compMapLeft
+  //     );
+  //     kahanPush(
+  //       left,
+  //       {
+  //         name: "EIdeta",
+  //         coefficient: curr.settlement
+  //           ? (6 / leftSpan ** 2) * curr.settlement * (El * Il)
+  //           : 0,
+  //       },
+  //       compMapLeft
+  //     );
+
+  //     if (curr.rightBeam) {
+  //       kahanPush(
+  //         right,
+  //         { name: "c", coefficient: momentToRight || 0 },
+  //         compMapRight
+  //       );
+  //       kahanPush(
+  //         right,
+  //         {
+  //           name: `EIteta${curr.id}`,
+  //           coefficient:
+  //             curr.type === "fixed"
+  //               ? 0
+  //               : (4 / curr.rightBeam.length) * (Er * Ir),
+  //         },
+  //         compMapRight
+  //       );
+  //       kahanPush(
+  //         right,
+  //         {
+  //           name: "EIdeta",
+  //           coefficient: curr.settlement
+  //             ? (-6 / curr.rightBeam.length ** 2) * curr.settlement * (Er * Ir)
+  //             : 0,
+  //         },
+  //         compMapRight
+  //       );
+  //     }
+  //   } else {
+  //     // Interior support
+  //     const rightSpan = next.x - curr.x;
+  //     const leftSpan = curr.x - prev.x;
+  //     const FEMToLeft = fem.getFixedEndMoment(
+  //       curr.leftBeam?.loads || [],
+  //       leftSpan,
+  //       "right",
+  //       prev
+  //     );
+  //     const FEMToRight = fem.getFixedEndMoment(
+  //       curr.rightBeam?.loads || [],
+  //       rightSpan,
+  //       "left",
+  //       support
+  //     );
+  //     const signConvention = next && curr.settlement < next.settlement ? -1 : 1;
+
+  //     // Right
+  //     kahanPush(
+  //       right,
+  //       { name: "c", coefficient: FEMToRight || 0 },
+  //       compMapRight
+  //     );
+  //     kahanPush(
+  //       right,
+  //       { name: `EIteta${curr.id}`, coefficient: (4 / rightSpan) * (Er * Ir) },
+  //       compMapRight
+  //     );
+  //     kahanPush(
+  //       right,
+  //       {
+  //         name: `EIteta${next.id}`,
+  //         coefficient: next.type === "fixed" ? 0 : (2 / rightSpan) * (Er * Ir),
+  //       },
+  //       compMapRight
+  //     );
+  //     kahanPush(
+  //       right,
+  //       {
+  //         name: "EIdeta",
+  //         coefficient: curr.settlement
+  //           ? (6 / rightSpan ** 2) *
+  //             curr.settlement *
+  //             (Er * Ir) *
+  //             signConvention
+  //           : 0,
+  //       },
+  //       compMapRight
+  //     );
+
+  //     // Left
+  //     kahanPush(left, { name: "c", coefficient: FEMToLeft || 0 }, compMapLeft);
+  //     kahanPush(
+  //       left,
+  //       { name: `EIteta${curr.id}`, coefficient: (4 / leftSpan) * (El * Il) },
+  //       compMapLeft
+  //     );
+  //     kahanPush(
+  //       left,
+  //       {
+  //         name: `EIteta${prev.id}`,
+  //         coefficient: prev.type === "fixed" ? 0 : (2 / leftSpan) * (El * Il),
+  //       },
+  //       compMapLeft
+  //     );
+  //     kahanPush(
+  //       left,
+  //       {
+  //         name: "EIdeta",
+  //         coefficient: curr.settlement
+  //           ? (6 / leftSpan ** 2) * curr.settlement * (El * Il) * signConvention
+  //           : 0,
+  //       },
+  //       compMapLeft
+  //     );
+  //   }
+
+  //   return { left, right };
+  // }
+
+  updatedSupportEquation(node: Node) {
+    const Emember: { [key: string]: number } = {};
+    const Imember: { [key: string]: number } = {};
+
+    // console.log("NODE: ", node.id);
+
+    for (const member of node.connectedMembers) {
+      Emember[
+        `member${member.member.startNode.id}${member.member.endNode.id}`
+      ] = member.member.Ecoef;
+
+      Imember[
+        `member${member.member.startNode.id}${member.member.endNode.id}`
+      ] = member.member.Icoef;
+    }
 
     const fem = new FixedEndMoments();
     const moment = new Moment();
 
-    const left: Term[] = [];
-    const right: Term[] = [];
-    const compMapLeft: { [key: string]: number } = {};
-    const compMapRight: { [key: string]: number } = {};
+    // let clk: Term[] = [];
+    // let antiClk: Term[] = [];
 
-    const curr = support;
-    const next = support.next;
-    const prev = support.prev;
+    let clk: { [key: string]: Term[] } = {};
+    let antiClk: { [key: string]: Term[] } = {};
 
-    // Helper Kahan push function
-    const kahanPush = (
-      arr: Term[],
-      term: Term,
-      compMap: { [key: string]: number }
-    ) => {
-      if (!term.coefficient || term.coefficient === 0) return;
+    const curr = node;
 
-      if (!(term.name in compMap)) {
-        arr.push({ ...term });
-        compMap[term.name] = 0; // initialize compensation
-      } else {
-        const existing = arr.find((t) => t.name === term.name)!;
-        const y = term.coefficient - compMap[term.name];
-        const t = existing.coefficient + y;
-        compMap[term.name] = t - existing.coefficient - y;
-        existing.coefficient = t;
+    for (const member of node.connectedMembers) {
+      const currMember = member.member;
+
+      // SETTLEMENT COMPARISON
+      const startSettlement = currMember.startNode.support?.settlement;
+      const endSettlement = currMember.endNode?.support?.settlement;
+
+      const signConvention =
+        startSettlement != null &&
+        endSettlement != null &&
+        startSettlement < endSettlement
+          ? -1
+          : 1;
+
+      if (currMember.startNode === node) {
+        // console.log("TRUE", currMember.startNode.id, node.id);
+
+        const span = currMember.length;
+        // console.log("SPAN: ", span);
+
+        const FEMToEnd = fem.getFixedEndMoment(
+          currMember.loads || [],
+          span,
+          "start",
+          currMember.startNode
+        );
+        // console.log(
+        //   `FEM${currMember.startNode.id}${currMember.endNode.id}: `,
+        //   FEMToEnd
+        // );
+
+        const E =
+          Emember[`member${currMember.startNode.id}${currMember.endNode.id}`];
+        const I =
+          Imember[`member${currMember.startNode.id}${currMember.endNode.id}`];
+
+        if (
+          currMember.endNode.support?.type === "pinned" &&
+          !currMember.startNode.support
+        ) {
+          const FEMToStart = fem.getFixedEndMoment(
+            currMember.loads || [],
+            span,
+            "end",
+            currMember.startNode
+          );
+
+          antiClk[`MOMENT${currMember.startNode.id}${currMember.endNode.id}`] =
+            [
+              {
+                name: "c",
+                coefficient: (FEMToEnd ?? 0) - ((FEMToStart ?? 0) / 2), //prettier-ignore
+              },
+              {
+                name: `EIteta${curr.id}`,
+                coefficient: (3 / span) * (E * I),
+              },
+              {
+                name: `EIteta${currMember.endNode.id}`,
+                coefficient: 0,
+              },
+              {
+                name: "EIdeta",
+                coefficient: curr.support?.settlement
+                  ? (3 / span) *
+                    curr.support.settlement *
+                    (E * I) *
+                    signConvention
+                  : 0,
+              },
+            ];
+        } else {
+          antiClk[`MOMENT${currMember.startNode.id}${currMember.endNode.id}`] =
+            [
+              { name: "c", coefficient: FEMToEnd || 0 },
+              {
+                name: `EIteta${curr.id}`,
+                coefficient:
+                  currMember.startNode.support?.type === "fixed"
+                    ? 0
+                    : (4 / span) * (E * I),
+              },
+              {
+                name: `EIteta${currMember.endNode.id}`,
+                coefficient:
+                  currMember.endNode.support?.type === "fixed"
+                    ? 0
+                    : (2 / span) * (E * I),
+              },
+              {
+                name: "EIdeta",
+                coefficient: curr.support?.settlement
+                  ? (6 / span ** 2) *
+                    curr.support.settlement *
+                    (E * I) *
+                    signConvention
+                  : 0,
+              },
+            ];
+        }
+      } else if (currMember.endNode === node) {
+        const span = currMember.length;
+        const FEMToStart = fem.getFixedEndMoment(
+          currMember.loads || [],
+          span,
+          "end",
+          currMember.startNode
+        );
+
+        const E =
+          Emember[`member${currMember.startNode.id}${currMember.endNode.id}`];
+        const I =
+          Imember[`member${currMember.startNode.id}${currMember.endNode.id}`];
+
+        if (
+          currMember.endNode.support?.type === "pinned" &&
+          !currMember.startNode.support
+        ) {
+          clk[`MOMENT${currMember.endNode.id}${currMember.startNode.id}`] = [
+            { name: "c", coefficient: 0 },
+            {
+              name: `EIteta${curr.id}`,
+              coefficient: 0,
+            },
+            {
+              name: `EIteta${currMember.startNode.id}`,
+              coefficient: 0,
+            },
+            {
+              name: "EIdeta",
+              coefficient: 0,
+            },
+          ];
+        } else {
+          clk[`MOMENT${currMember.endNode.id}${currMember.startNode.id}`] = [
+            { name: "c", coefficient: FEMToStart || 0 },
+            {
+              name: `EIteta${curr.id}`,
+              coefficient:
+                currMember.endNode.support?.type === "fixed"
+                  ? 0
+                  : (4 / span) * (E * I),
+            },
+            {
+              name: `EIteta${currMember.startNode.id}`,
+              coefficient:
+                currMember.startNode.support?.type === "fixed"
+                  ? 0
+                  : (2 / span) * (E * I),
+            },
+            {
+              name: "EIdeta",
+              coefficient: curr.support?.settlement
+                ? (6 / span ** 2) *
+                  curr.support.settlement *
+                  (E * I) *
+                  signConvention
+                : 0,
+            },
+          ];
+        }
       }
-    };
-
-    if (!prev) {
-      // Left-most support
-      const rightSpan = next
-        ? next.position - curr.position
-        : curr.rightBeam?.length || 0;
-      const FEMToRight = fem.getFixedEndMoment(
-        curr.rightBeam?.loads || [],
-        rightSpan,
-        "left",
-        support
-      );
-      const momentToLeft = moment.getMoment(
-        curr.position,
-        curr.leftBeam?.getEquivalentPointLoads() || []
-      );
-
-      if (curr.leftBeam) {
-        kahanPush(
-          left,
-          { name: "c", coefficient: momentToLeft || 0 },
-          compMapLeft
-        );
-        kahanPush(
-          left,
-          {
-            name: `EIteta${curr.id}`,
-            coefficient:
-              curr.type === "fixed"
-                ? 0
-                : (4 / curr.leftBeam.length) * (Er * Ir),
-          },
-          compMapLeft
-        );
-        kahanPush(
-          left,
-          {
-            name: "EIdeta",
-            coefficient: curr.settlement
-              ? (-6 / curr.leftBeam.length ** 2) * curr.settlement * (Er * Ir)
-              : 0,
-          },
-          compMapLeft
-        );
-      }
-
-      kahanPush(
-        right,
-        { name: "c", coefficient: FEMToRight || 0 },
-        compMapRight
-      );
-      kahanPush(
-        right,
-        {
-          name: `EIteta${curr.id}`,
-          coefficient: curr.type === "fixed" ? 0 : (4 / rightSpan) * (Er * Ir),
-        },
-        compMapRight
-      );
-      if (next) {
-        kahanPush(
-          right,
-          {
-            name: `EIteta${next.id}`,
-            coefficient:
-              next.type === "fixed" ? 0 : (2 / rightSpan) * (Er * Ir),
-          },
-          compMapRight
-        );
-      }
-      kahanPush(
-        right,
-        {
-          name: "EIdeta",
-          coefficient: curr.settlement
-            ? (-6 / rightSpan ** 2) * curr.settlement * (Er * Ir)
-            : 0,
-        },
-        compMapRight
-      );
-    } else if (!next) {
-      // Right-most support
-      const leftSpan = curr.position - prev.position;
-      const FEMToLeft = fem.getFixedEndMoment(
-        curr.leftBeam?.loads || [],
-        leftSpan,
-        "right",
-        prev
-      );
-      const momentToRight = moment.getMoment(
-        curr.position,
-        curr.rightBeam?.getEquivalentPointLoads() || []
-      );
-
-      kahanPush(left, { name: "c", coefficient: FEMToLeft || 0 }, compMapLeft);
-      kahanPush(
-        left,
-        {
-          name: `EIteta${curr.id}`,
-          coefficient: curr.type === "fixed" ? 0 : (4 / leftSpan) * (El * Il),
-        },
-        compMapLeft
-      );
-      kahanPush(
-        left,
-        {
-          name: `EIteta${prev.id}`,
-          coefficient: prev.type === "fixed" ? 0 : (2 / leftSpan) * (El * Il),
-        },
-        compMapLeft
-      );
-      kahanPush(
-        left,
-        {
-          name: "EIdeta",
-          coefficient: curr.settlement
-            ? (6 / leftSpan ** 2) * curr.settlement * (El * Il)
-            : 0,
-        },
-        compMapLeft
-      );
-
-      if (curr.rightBeam) {
-        kahanPush(
-          right,
-          { name: "c", coefficient: momentToRight || 0 },
-          compMapRight
-        );
-        kahanPush(
-          right,
-          {
-            name: `EIteta${curr.id}`,
-            coefficient:
-              curr.type === "fixed"
-                ? 0
-                : (4 / curr.rightBeam.length) * (Er * Ir),
-          },
-          compMapRight
-        );
-        kahanPush(
-          right,
-          {
-            name: "EIdeta",
-            coefficient: curr.settlement
-              ? (-6 / curr.rightBeam.length ** 2) * curr.settlement * (Er * Ir)
-              : 0,
-          },
-          compMapRight
-        );
-      }
-    } else {
-      // Interior support
-      const rightSpan = next.position - curr.position;
-      const leftSpan = curr.position - prev.position;
-      const FEMToLeft = fem.getFixedEndMoment(
-        curr.leftBeam?.loads || [],
-        leftSpan,
-        "right",
-        prev
-      );
-      const FEMToRight = fem.getFixedEndMoment(
-        curr.rightBeam?.loads || [],
-        rightSpan,
-        "left",
-        support
-      );
-      const signConvention = next && curr.settlement < next.settlement ? -1 : 1;
-
-      // Right
-      kahanPush(
-        right,
-        { name: "c", coefficient: FEMToRight || 0 },
-        compMapRight
-      );
-      kahanPush(
-        right,
-        { name: `EIteta${curr.id}`, coefficient: (4 / rightSpan) * (Er * Ir) },
-        compMapRight
-      );
-      kahanPush(
-        right,
-        {
-          name: `EIteta${next.id}`,
-          coefficient: next.type === "fixed" ? 0 : (2 / rightSpan) * (Er * Ir),
-        },
-        compMapRight
-      );
-      kahanPush(
-        right,
-        {
-          name: "EIdeta",
-          coefficient: curr.settlement
-            ? (6 / rightSpan ** 2) *
-              curr.settlement *
-              (Er * Ir) *
-              signConvention
-            : 0,
-        },
-        compMapRight
-      );
-
-      // Left
-      kahanPush(left, { name: "c", coefficient: FEMToLeft || 0 }, compMapLeft);
-      kahanPush(
-        left,
-        { name: `EIteta${curr.id}`, coefficient: (4 / leftSpan) * (El * Il) },
-        compMapLeft
-      );
-      kahanPush(
-        left,
-        {
-          name: `EIteta${prev.id}`,
-          coefficient: prev.type === "fixed" ? 0 : (2 / leftSpan) * (El * Il),
-        },
-        compMapLeft
-      );
-      kahanPush(
-        left,
-        {
-          name: "EIdeta",
-          coefficient: curr.settlement
-            ? (6 / leftSpan ** 2) * curr.settlement * (El * Il) * signConvention
-            : 0,
-        },
-        compMapLeft
-      );
     }
 
-    return { left, right };
+    return { clk, antiClk };
   }
 
   // getEquations(support: FixedSupport | PinnedSupport | RollerSupport) {
@@ -522,16 +717,28 @@ export class SlopeDeflection {
   //   return this.collectLikeTerms(supportEqn);
   // }
 
-  getEquations(support: FixedSupport | PinnedSupport | RollerSupport) {
-    const { left, right } = this.supportEquations(support);
+  // getEquations(support: FixedSupport | PinnedSupport | RollerSupport) {
+  //   const { left, right } = this.supportEquations(support);
+
+  //   // combine right + left with stable summation
+  //   const supportEqn = [...right, ...left];
+
+  //   return this.collectLikeTerms(supportEqn);
+  // }
+
+  updatedGetEquations(node: Node) {
+    const { clk, antiClk } = this.updatedSupportEquation(node);
+    // console.log(clk, antiClk);
 
     // combine right + left with stable summation
-    const supportEqn = [...right, ...left];
 
-    return this.collectLikeTerms(supportEqn);
-  }
+    // const supportEqn = [... Object.values(antiClk), ... Object.values(clk)];
+    const terms: Term[] = [
+      ...Object.values(antiClk).flat(),
+      ...Object.values(clk).flat(),
+    ];
 
-  getResultMoments() {
-    // Implementation remains the same
+    const res = this.collectLikeTerms(terms);
+    return res;
   }
 }

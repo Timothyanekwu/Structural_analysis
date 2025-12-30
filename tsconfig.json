@@ -10,7 +10,7 @@
   "include": [
     "*.ts",
     "elements/load.ts",
-    "elements/beam.ts",
+    "elements/member.ts",
     "elements/support.ts"
   ]
 }

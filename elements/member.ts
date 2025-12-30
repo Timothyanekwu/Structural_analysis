@@ -2,29 +2,7 @@
 
 import { PointLoad, UDL, VDL } from "./load";
 import { FixedSupport, RollerSupport, PinnedSupport } from "./support";
-
-export class Node {
-  id: string;
-  x: number;
-  y: number;
-  connectedMembers: { member: Beam; isStart: boolean }[] = [];
-  support: any = null; // FixedSupport | RollerSupport | PinnedSupport | null
-
-  constructor(id: string, x: number, y: number, support: any = null) {
-    this.id = id;
-    this.x = x;
-    this.y = y;
-    this.support = support;
-
-    if (support) {
-      support.node = this; // link support to node
-    }
-  }
-
-  addMember(member: Beam, isStart: boolean) {
-    this.connectedMembers.push({ member, isStart });
-  }
-}
+import { Node } from "./node";
 
 export abstract class Member {
   startNode: Node;
@@ -69,20 +47,27 @@ export abstract class Member {
 }
 
 export class Beam extends Member {
-  leftSupport: FixedSupport | RollerSupport | PinnedSupport | null;
-  rightSupport: FixedSupport | RollerSupport | PinnedSupport | null;
+  // leftSupport: FixedSupport | RollerSupport | PinnedSupport | null;
+  // rightSupport: FixedSupport | RollerSupport | PinnedSupport | null;
 
   constructor(
     startNode: Node,
     endNode: Node,
-    leftSupport: FixedSupport | RollerSupport | PinnedSupport | null,
-    rightSupport: FixedSupport | RollerSupport | PinnedSupport | null,
+    // leftSupport: FixedSupport | RollerSupport | PinnedSupport | null,
+    // rightSupport: FixedSupport | RollerSupport | PinnedSupport | null,
     Ecoef = 1,
     Icoef = 1
   ) {
     super(startNode, endNode, Ecoef, Icoef);
-    this.leftSupport = leftSupport;
-    this.rightSupport = rightSupport;
+    // this.leftSupport = leftSupport;
+    // this.rightSupport = rightSupport;
+
+    if (this.startNode.y !== this.endNode.y) {
+      throw new Error(
+        `Beam must be horizontal: Node${this.startNode.id}.y is not equal to Node${this.endNode.id}.y, 
+        Node${this.startNode.id} is ${this.startNode.y} and Node${this.endNode.id} is ${this.endNode.y}  `
+      );
+    }
 
     startNode.addMember(this, true);
     endNode.addMember(this, false);
@@ -92,9 +77,16 @@ export class Beam extends Member {
 export class Column extends Member {
   constructor(startNode: Node, endNode: Node, Ecoef = 1, Icoef = 1) {
     super(startNode, endNode, Ecoef, Icoef);
-    if (Math.abs(this.angle) > 0.01) {
-      throw new Error("Column must be vertical");
+
+    if (this.startNode.x !== this.endNode.x) {
+      throw new Error(
+        `Column must be vertical: Node${this.startNode.id}.x is not equal to Node${this.endNode.id}.x, 
+        Node${this.startNode.id}.x is ${this.startNode.x} and Node${this.endNode.id}.x is ${this.endNode.x} `
+      );
     }
+
+    startNode.addMember(this, true);
+    endNode.addMember(this, false);
   }
 }
 
@@ -107,5 +99,8 @@ export class InclinedMember extends Member {
     ) {
       throw new Error("InclinedMember must not be horizontal or vertical");
     }
+
+    startNode.addMember(this, true);
+    endNode.addMember(this, false);
   }
 }

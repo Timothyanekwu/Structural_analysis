@@ -38,6 +38,7 @@ export class Equation {
       result[name] = arr[i];
     });
 
+    // console.log(result);
     return result;
   }
 }
