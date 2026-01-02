@@ -4,12 +4,20 @@ import { PointLoad, UDL, VDL } from "./load";
 import { FixedSupport, RollerSupport, PinnedSupport } from "./support";
 import { Node } from "./node";
 
+interface EndReactions {
+  RxStart: number;
+  RyStart: number;
+  RxEnd: number;
+  RyEnd: number;
+}
+
 export abstract class Member {
   startNode: Node;
   endNode: Node;
   loads: (PointLoad | UDL | VDL)[];
   Ecoef: number;
   Icoef: number;
+  endReactions: EndReactions;
 
   constructor(startNode: Node, endNode: Node, Ecoef = 1, Icoef = 1) {
     this.startNode = startNode;
@@ -17,6 +25,12 @@ export abstract class Member {
     this.loads = [];
     this.Ecoef = Ecoef;
     this.Icoef = Icoef;
+    this.endReactions = {
+      RxEnd: 0,
+      RyEnd: 0,
+      RxStart: 0,
+      RyStart: 0,
+    };
   }
 
   get length(): number {
@@ -47,9 +61,6 @@ export abstract class Member {
 }
 
 export class Beam extends Member {
-  // leftSupport: FixedSupport | RollerSupport | PinnedSupport | null;
-  // rightSupport: FixedSupport | RollerSupport | PinnedSupport | null;
-
   constructor(
     startNode: Node,
     endNode: Node,

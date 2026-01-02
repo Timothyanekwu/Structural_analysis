@@ -5,6 +5,8 @@ export class Node {
   id: string;
   x: number;
   y: number;
+  xReaction: number;
+  yReaction: number;
   connectedMembers: {
     member: Beam | Column | InclinedMember;
     isStart: boolean;
@@ -22,6 +24,8 @@ export class Node {
     this.x = x;
     this.y = y;
     this.support = support;
+    this.xReaction = 0;
+    this.yReaction = 0;
 
     if (support) {
       support.node = this; // link support to node

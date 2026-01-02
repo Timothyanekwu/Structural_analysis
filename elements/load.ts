@@ -1,8 +1,11 @@
+import { Beam, Column, InclinedMember } from "./member";
+
 // --- PointLoad Class ---
 export class PointLoad {
   position: number;
   magnitude: number;
   name: "PointLoad" = "PointLoad";
+  // member: Beam | Column | InclinedMember
 
   constructor(position: number, magnitude: number) {
     this.position = position;

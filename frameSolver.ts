@@ -137,75 +137,214 @@ export class FrameSolver {
     return result;
   }
 
+  private computeBeamReactions(member: Beam) {
+    const loads = member.getEquivalentPointLoads();
+    const L = member.length;
+    const moments = this.updatedGetFinalMoments();
+
+    const Mstart =
+      moments[`MOMENT${member.startNode.id}${member.endNode.id}`] ?? 0;
+    const Mend =
+      moments[`MOMENT${member.endNode.id}${member.startNode.id}`] ?? 0;
+
+    // Standard beam vertical reaction (Shear) formula
+    const loadMoments = loads.reduce((sum, load) => {
+      const d = Math.abs(load.position - member.startNode.x);
+      return sum + load.magnitude * d;
+    }, 0);
+
+    const RyEnd = (loadMoments - Mend - Mstart) / L;
+    const totalLoad = loads.reduce((s, l) => s + l.magnitude, 0);
+    const RyStart = totalLoad - RyEnd;
+
+    return { RxStart: 0, RxEnd: 0, RyStart, RyEnd };
+  }
+
+  private computeColumnReactions(member: Column) {
+    const loads = member.getEquivalentPointLoads();
+    const L = member.length;
+    const moments = this.updatedGetFinalMoments();
+
+    const Mstart =
+      moments[`MOMENT${member.startNode.id}${member.endNode.id}`] ?? 0;
+    const Mend =
+      moments[`MOMENT${member.endNode.id}${member.startNode.id}`] ?? 0;
+
+    // Standard column horizontal reaction (Shear) formula
+    const loadMoments = loads.reduce((sum, load) => {
+      const d = Math.abs(load.position - member.startNode.y);
+      return sum + load.magnitude * d;
+    }, 0);
+
+    const RxEnd = (loadMoments - Mend - Mstart) / L;
+    const totalLoad = loads.reduce((s, l) => s + l.magnitude, 0);
+    const RxStart = totalLoad - RxEnd;
+
+    return { RxStart, RxEnd, RyStart: 0, RyEnd: 0 };
+  }
+
+  private applyMemberReactions(member: any, reactions: any) {
+    member.startNode.xReaction += reactions.RxStart;
+    member.endNode.xReaction += reactions.RxEnd;
+    member.startNode.yReaction += reactions.RyStart;
+    member.endNode.yReaction += reactions.RyEnd;
+  }
+
+  updatedSolveReactions() {
+    // 1. Reset all nodes
+    this.nodes.forEach((n) => {
+      n.xReaction = 0;
+      n.yReaction = 0;
+    });
+
+    // 2. Calculate Local Shears (Member-level reactions)
+    for (const member of this.members) {
+      let reactions;
+      if (member instanceof Beam) {
+        reactions = this.computeBeamReactions(member);
+      } else if (member instanceof Column) {
+        reactions = this.computeColumnReactions(member);
+      } else {
+        throw new Error("Unknown member type");
+      }
+      this.applyMemberReactions(member, reactions);
+    }
+
+    // 3. Snapshot Local Shears into the final results map
+    // This ensures Node C starts with its correct local shear (~21.19)
+    const results = new Map<string, { xReaction: number; yReaction: number }>();
+    this.nodes.forEach((node) => {
+      results.set(node.id, {
+        xReaction: node.xReaction,
+        yReaction: node.yReaction,
+      });
+    });
+
+    // 4. AXIAL TRANSFER PASS
+    // We sort nodes by X to ensure horizontal forces flow from Left to Right (A/C -> D -> E)
+    const sortedNodes = [...this.nodes].sort((a, b) => a.x - b.x);
+
+    for (const node of sortedNodes) {
+      if (!node.support) {
+        // --- VERTICAL TRANSFER (Joint -> Column -> Support) ---
+        // If Node C or D has a vertical shear (from a beam), push it down the column
+        if (Math.abs(node.yReaction) > 0.001) {
+          const colConn = node.connectedMembers.find(
+            (m) => m.member instanceof Column
+          );
+          if (colConn) {
+            const targetNode = colConn.isStart
+              ? colConn.member.endNode
+              : colConn.member.startNode;
+            const res = results.get(targetNode.id);
+            if (res) res.yReaction += node.yReaction;
+          }
+        }
+
+        // --- HORIZONTAL TRANSFER (Joint -> Beam -> Next Joint/Support) ---
+        // If Node C or D has a horizontal shear (from a column), push it to the RIGHT
+        if (Math.abs(node.xReaction) > 0.001) {
+          // Look for a beam that connects to a node further to the right (higher X)
+          const beamToRight = node.connectedMembers.find((m) => {
+            const other = m.isStart ? m.member.endNode : m.member.startNode;
+            return m.member instanceof Beam && other.x > node.x;
+          });
+
+          if (beamToRight) {
+            const targetNode = beamToRight.isStart
+              ? beamToRight.member.endNode
+              : beamToRight.member.startNode;
+            // IMPORTANT: We update the "node.xReaction" of the target so it can be
+            // pushed further in the next iteration of the loop, AND update the result map.
+            targetNode.xReaction += node.xReaction;
+
+            const res = results.get(targetNode.id);
+            if (res) res.xReaction = targetNode.xReaction;
+          }
+        }
+      }
+    }
+
+    return results;
+  }
+
   // updatedSolveReactions(member: Beam | Column | InclinedMember) {
   //   const loads = member.getEquivalentPointLoads();
   //   const L = member.length;
   //   const startNode = member.startNode;
   //   const endNode = member.endNode;
-  //   const leftMoment = startNode.support?.rightMoment ?? 0;
-  //   const rightMoment = endNode.support?.leftMoment ?? 0;
-  //   // const leftSupport = member.startNode.support || null;
-  //   // const rightSupport = member.endNode.support || null;
-  //   // const leftMoment = leftSupport?.rightMoment ?? 0;
-  //   // const rightMoment = rightSupport?.leftMoment ?? 0;
+  //   const moments = this.updatedGetFinalMoments();
+  //   const startMoment = moments[`MOMENT${startNode.id}${endNode.id}`];
+  //   const endMoment = moments[`MOMENT${endNode.id}${startNode.id}`];
 
-  //   if (startNode.support && endNode.support) {
-  //     const refPos = startNode.x;
-
-  //     const loadMoments = loads.reduce((acc: number, curr: PointLoad) => {
-  //       const distance = curr.position - refPos;
-  //       const moment = curr.magnitude * distance;
-
-  //       return acc + moment;
+  //   // sum of moments
+  //   if (member instanceof Column) {
+  //     const loadMoments = loads.reduce((prev: number, curr: PointLoad) => {
+  //       const distance = Math.abs(curr.position - startNode.y);
+  //       return prev + curr.magnitude * distance;
   //     }, 0);
 
-  //     const rightReaction = (loadMoments - leftMoment - rightMoment) / L;
+  //     const endReaction = (loadMoments - endMoment - startMoment) / L;
+  //     member.endReactions.RxEnd = endReaction;
+  //     // console.log(
+  //     //   `MEMBER${member.startNode.id}${member.endNode.id}`,
+  //     //   endNode.xReaction
+  //     // );
+  //     endNode.xReaction += endReaction;
 
-  //     const totalLoads = loads.reduce((acc: number, curr: PointLoad) => {
-  //       return acc + curr.magnitude;
+  //     const sumOfLoads = loads.reduce(
+  //       (prev: number, curr: PointLoad) => prev + curr.magnitude,
+  //       0
+  //     );
+  //     const startReaction = sumOfLoads - endReaction;
+  //     member.endReactions.RxStart = startReaction;
+  //     startNode.xReaction += startReaction;
+
+  //     // console.log(startReaction, endReaction);
+  //     return { startReaction, endReaction };
+  //   } else if (member instanceof Beam) {
+  //     // console.log(
+  //     //   `MEMBER${member.startNode.id}${member.endNode.id}`,
+  //     //   startNode.xReaction
+  //     // );
+  //     member.endReactions.RxStart += -startNode.xReaction;
+  //     member.endReactions.RxEnd += -member.endReactions.RxStart;
+  //     endNode.xReaction += -member.endReactions.RxEnd;
+
+  //     const loadMoments = loads.reduce((prev: number, curr: PointLoad) => {
+  //       const distance = Math.abs(curr.position - startNode.x);
+  //       return prev + curr.magnitude * distance;
   //     }, 0);
 
-  //     const leftReaction = totalLoads - rightReaction;
+  //     const endReaction = (loadMoments - endMoment - startMoment) / L;
+  //     member.endReactions.RyEnd = endReaction;
+  //     endNode.yReaction += endReaction;
 
-  //     return { leftReaction, rightReaction };
-  //   } else {
-  //     // when we are haveing overhanging write the logic here
+  //     const sumOfLoads = loads.reduce(
+  //       (prev: number, curr: PointLoad) => prev + curr.magnitude,
+  //       0
+  //     );
+  //     const startReaction = sumOfLoads - endReaction;
+  //     member.endReactions.RyStart = startReaction;
+  //     startNode.yReaction += startReaction;
+
+  //     // console.log(startReaction, endReaction);
+  //     return { startReaction, endReaction };
   //   }
-  // }
-
-  // updatedGetSupportReactions() {
-  //   // const supports = this.getSupports();
-  //   const nodes = this.nodes;
-
-  //   const result: Record<string, number> = {};
-
-  //   nodes
-  //     .filter((node): node is Node => node.support !== null)
-  //     .forEach((node) => {
-  //       // LEFT
-  //       let reaction = 0;
-
-  //       for (const member of node.connectedMembers) {
-  //         if (!member.isStart) {
-  //           const result =
-  //             this.updatedSolveReactions(member.member)?.rightReaction ?? 0;
-  //           reaction += result;
-  //         } else {
-  //           const result =
-  //             this.updatedSolveReactions(member.member)?.leftReaction ?? 0;
-  //           reaction += result;
-  //         }
-  //       }
-
-  //       result[`SUPPORT${node.support?.id}`] = reaction;
-  //     });
-  //   return result;
   // }
 }
 
 const output = new FrameSolver([AC, CD, DE, BD]);
 // output.isSideSway();
 
-// output.updatedGetFinalMoments();
-console.log(output.updatedGetFinalMoments());
+output.updatedGetFinalMoments();
+// console.log(output.updatedGetFinalMoments());
+console.log(output.updatedSolveReactions());
+
+// console.log("NODE_A: ", nodeA.yReaction, nodeA.xReaction);
+// console.log("NODE_C: ", nodeC.yReaction, nodeC.xReaction);
+// console.log("NODE_D: ", nodeD.yReaction, nodeD.xReaction);
+// console.log("NODE_B: ", nodeB.yReaction, nodeB.xReaction);
+// console.log("NODE_E: ", nodeE.yReaction, nodeE.xReaction);
+
 // console.log(output.updatedGetSupportReactions());
